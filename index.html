@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pipeline Coverage Calculator</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(45deg, #2c3e50, #34495e);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        .header h1 { font-size: 2rem; margin-bottom: 10px; }
+        .mode-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .mode-btn {
+            padding: 10px 20px;
+            border: 2px solid white;
+            background: transparent;
+            color: white;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .mode-btn.active { background: white; color: #2c3e50; }
+        .content {
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 0;
+        }
+        .inputs {
+            background: #f8f9fa;
+            padding: 25px;
+            border-right: 1px solid #dee2e6;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .outputs {
+            padding: 25px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .section {
+            margin-bottom: 20px;
+        }
+        .section h3 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-size: 1rem;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 3px;
+        }
+        .row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+        label {
+            font-weight: 600;
+            color: #555;
+            font-size: 0.85rem;
+            margin-bottom: 2px;
+            display: block;
+        }
+        input {
+            width: 100%;
+            padding: 6px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 0.85rem;
+        }
+        input:focus { outline: none; border-color: #3498db; }
+        .target-input { background: #fff3cd; border-color: #ffc107; }
+        .team-box {
+            background: white;
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 5px;
+            border-left: 3px solid #3498db;
+        }
+        .team-box h5 { color: #2c3e50; margin-bottom: 8px; font-size: 0.9rem; }
+        .result-section {
+            margin-bottom: 25px;
+            background: #fff;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .result-section h2 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+            border-left: 3px solid #3498db;
+            padding-left: 10px;
+        }
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .metric {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 6px;
+            text-align: center;
+            border-left: 3px solid #3498db;
+        }
+        .metric h4 { color: #2c3e50; margin-bottom: 5px; font-size: 0.8rem; }
+        .metric .value { font-size: 1.3rem; font-weight: bold; color: #3498db; margin-bottom: 3px; }
+        .metric .desc { font-size: 0.7rem; color: #666; font-style: italic; }
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+            border-radius: 5px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .table th {
+            background: #3498db;
+            color: white;
+            padding: 8px 6px;
+            text-align: left;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .table td {
+            padding: 8px 6px;
+            border-bottom: 1px solid #eee;
+            font-size: 0.75rem;
+        }
+        .table tr:nth-child(even) td { background: #f8f9fa; }
+        .status-good { background: #d4edda; color: #155724; font-weight: bold; text-align: center; }
+        .status-warn { background: #fff3cd; color: #856404; font-weight: bold; text-align: center; }
+        .status-bad { background: #f8d7da; color: #721c24; font-weight: bold; text-align: center; }
+        .math {
+            background: #e8f4fd;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            border-left: 3px solid #3498db;
+            font-size: 0.8rem;
+        }
+        .recommendations {
+            background: #e8f4fd;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 3px solid #3498db;
+        }
+        .recommendations h3 { color: #2c3e50; margin-bottom: 10px; }
+        .recommendations ul { list-style: none; }
+        .recommendations li {
+            padding: 4px 0;
+            padding-left: 15px;
+            position: relative;
+            font-size: 0.85rem;
+        }
+        .recommendations li:before {
+            content: "→";
+            position: absolute;
+            left: 0;
+            color: #3498db;
+            font-weight: bold;
+        }
+        @media (max-width: 1000px) {
+            .content { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Pipeline Coverage Calculator</h1>
+            <p>Forward and reverse pipeline planning</p>
+            
+            <div class="mode-buttons">
+                <button class="mode-btn active" data-mode="forward">📊 Forward Mode</button>
+                <button class="mode-btn" data-mode="target">🎯 Target Mode</button>
+            </div>
+        </div>
+        
+        <div class="content">
+            <div class="inputs">
+                <!-- BASIC INPUTS -->
+                <div class="section">
+                    <h3>Business Basics</h3>
+                    <div class="row">
+                        <div>
+                            <label>Annual Revenue Target ($)</label>
+                            <input type="number" id="arrTarget" value="1000000">
+                        </div>
+                        <div>
+                            <label>Average Deal Size ($)</label>
+                            <input type="number" id="avgDealSize" value="50000">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div>
+                            <label>Sales Cycle (days)</label>
+                            <input type="number" id="salesCycle" value="60">
+                        </div>
+                        <div>
+                            <label>Current Pipeline ($)</label>
+                            <input type="number" id="currentPipeline" value="3200000">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- TEAM STRUCTURE -->
+                <div class="section">
+                    <h3>Team Structure</h3>
+                    <div class="row">
+                        <div>
+                            <label>Number of AEs</label>
+                            <input type="number" id="numAEs" value="5" min="1" max="10">
+                        </div>
+                        <div>
+                            <label>Number of SDRs</label>
+                            <input type="number" id="numSDRs" value="5" min="1" max="10">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- SDR METRICS -->
+                <div class="section">
+                    <h3>SDR Cadence Metrics</h3>
+                    <div class="row">
+                        <div>
+                            <label>Email Delivery Rate (%)</label>
+                            <input type="number" id="deliveryRate" value="95">
+                        </div>
+                        <div>
+                            <label>Email Open Rate (%)</label>
+                            <input type="number" id="openRate" value="22">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div>
+                            <label>Email Response Rate (%)</label>
+                            <input type="number" id="responseRate" value="3">
+                        </div>
+                        <div>
+                            <label>Call Connect Rate (%)</label>
+                            <input type="number" id="callConnectRate" value="15">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div>
+                            <label>Meeting Book Rate (%)</label>
+                            <input type="number" id="meetingBookRate" value="8">
+                        </div>
+                        <div>
+                            <label>SDR→AE Handoff Rate (%)</label>
+                            <input type="number" id="handoffRate" value="85">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div>
+                            <label>Touch Points per Cadence</label>
+                            <input type="number" id="touchPoints" value="8">
+                        </div>
+                        <div>
+                            <label>Cadence Duration (days)</label>
+                            <input type="number" id="cadenceDuration" value="14">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- AE CONVERSION RATES -->
+                <div class="section">
+                    <h3>AE Conversion Rates (%)</h3>
+                    <div class="row">
+                        <div>
+                            <label>Discovery → Opportunity</label>
+                            <input type="number" id="discToOpp" value="45">
+                        </div>
+                        <div>
+                            <label>Opportunity → Proposal</label>
+                            <input type="number" id="oppToProp" value="70">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div>
+                            <label>Proposal → Closed Won</label>
+                            <input type="number" id="propToClose" value="35">
+                        </div>
+                        <div></div>
+                    </div>
+                </div>
+                
+                <!-- INDIVIDUAL INPUTS (Forward Mode) -->
+                <div class="section" id="forwardInputs">
+                    <h3>Individual Performance</h3>
+                    <div id="sdrInputs"></div>
+                    <div id="aeInputs"></div>
+                </div>
+                
+                <!-- TARGET INPUTS (Target Mode) -->
+                <div class="section" id="targetInputs" style="display: none;">
+                    <h3>🎯 Target Requirements</h3>
+                    <div class="row">
+                        <div>
+                            <label>Target Meetings/Month</label>
+                            <input type="number" id="targetMeetings" class="target-input" value="40">
+                        </div>
+                        <div>
+                            <label>Target Cadences/Month</label>
+                            <input type="number" id="targetCadences" class="target-input" value="200">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="outputs">
+                <!-- BUSINESS REQUIREMENTS -->
+                <div class="result-section">
+                    <h2>📊 Business Requirements</h2>
+                    <div class="metrics">
+                        <div class="metric">
+                            <h4>Monthly Revenue</h4>
+                            <div class="value" id="monthlyRevenue">$83K</div>
+                            <div class="desc">Annual Target ÷ 12</div>
+                        </div>
+                        <div class="metric">
+                            <h4>Deals Needed</h4>
+                            <div class="value" id="dealsNeeded">20</div>
+                            <div class="desc">Revenue ÷ Deal Size</div>
+                        </div>
+                        <div class="metric">
+                            <h4>Discovery Calls</h4>
+                            <div class="value" id="discoveryCalls">133</div>
+                            <div class="desc">Based on AE rates</div>
+                        </div>
+                        <div class="metric">
+                            <h4>SDR Meetings</h4>
+                            <div class="value" id="sdrMeetings">156</div>
+                            <div class="desc">Including handoff rate</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- PIPELINE COVERAGE -->
+                <div class="result-section">
+                    <h2>🎯 Pipeline Coverage</h2>
+                    <div class="metrics">
+                        <div class="metric">
+                            <h4>Basic Coverage</h4>
+                            <div class="value" id="basicCoverage">3.2x</div>
+                            <div class="desc">Pipeline ÷ Target</div>
+                        </div>
+                        <div class="metric">
+                            <h4>Weighted Coverage</h4>
+                            <div class="value" id="weightedCoverage">1.1x</div>
+                            <div class="desc">With conversion rates</div>
+                        </div>
+                    </div>
+                    <div class="math" id="coverageMath"></div>
+                </div>
+                
+                <!-- AE PERFORMANCE -->
+                <div class="result-section">
+                    <h2>👥 AE Performance</h2>
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>AE</th>
+                                <th>Quota</th>
+                                <th>Pipeline</th>
+                                <th>Disc→Opp</th>
+                                <th>Opp→Prop</th>
+                                <th>Prop→Close</th>
+                                <th>Overall</th>
+                                <th>Weighted</th>
+                                <th>Coverage</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="aeTable"></tbody>
+                    </table>
+                    <div class="math" id="aeAnalysis"></div>
+                </div>
+                
+                <!-- SDR PERFORMANCE -->
+                <div class="result-section">
+                    <h2>📞 SDR Performance</h2>
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>SDR</th>
+                                <th>Cadences/Month</th>
+                                <th>Emails/Month</th>
+                                <th>Calls/Month</th>
+                                <th>Meetings/Month</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="sdrTable"></tbody>
+                    </table>
+                    <div class="math" id="sdrAnalysis"></div>
+                </div>
+                
+                <!-- REVERSE RESULTS (Target Mode) -->
+                <div class="result-section" id="reverseResults" style="display: none;">
+                    <h2>🎯 Required Activities per SDR</h2>
+                    <div class="metrics">
+                        <div class="metric">
+                            <h4>Cadences Needed</h4>
+                            <div class="value" id="reqCadences">40/month</div>
+                            <div class="desc">Per SDR</div>
+                        </div>
+                        <div class="metric">
+                            <h4>Prospects Needed</h4>
+                            <div class="value" id="reqProspects">320/month</div>
+                            <div class="desc">Per SDR</div>
+                        </div>
+                        <div class="metric">
+                            <h4>Emails Needed</h4>
+                            <div class="value" id="reqEmails">1,280/month</div>
+                            <div class="desc">Per SDR</div>
+                        </div>
+                        <div class="metric">
+                            <h4>Calls Needed</h4>
+                            <div class="value" id="reqCalls">640/month</div>
+                            <div class="desc">Per SDR</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- RECOMMENDATIONS -->
+                <div class="recommendations">
+                    <h3>🧠 Strategic Recommendations</h3>
+                    <div id="recommendations"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentMode = 'forward';
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            setupEventListeners();
+            updateTeamInputs();
+            calculate();
+        });
+
+        function setupEventListeners() {
+            // Mode buttons
+            document.querySelectorAll('.mode-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const mode = this.getAttribute('data-mode');
+                    switchMode(mode);
+                });
+            });
+
+            // Input listeners
+            const inputIds = [
+                'arrTarget', 'avgDealSize', 'salesCycle', 'currentPipeline',
+                'deliveryRate', 'openRate', 'responseRate', 'callConnectRate',
+                'meetingBookRate', 'handoffRate', 'touchPoints', 'cadenceDuration',
+                'discToOpp', 'oppToProp', 'propToClose'
+            ];
+
+            inputIds.forEach(id => {
+                const element = document.getElementById(id);
+                if (element) {
+                    element.addEventListener('input', debounce(calculate, 300));
+                }
+            });
+
+            // Team structure listeners
+            document.getElementById('numAEs').addEventListener('input', debounce(updateTeamAndCalculate, 300));
+            document.getElementById('numSDRs').addEventListener('input', debounce(updateTeamAndCalculate, 300));
+
+            // Target inputs
+            document.getElementById('targetMeetings').addEventListener('input', debounce(calculateBackward, 300));
+            document.getElementById('targetCadences').addEventListener('input', debounce(calculateBackward, 300));
+        }
+
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        function switchMode(mode) {
+            currentMode = mode;
+            
+            // Update button states
+            document.querySelectorAll('.mode-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.getAttribute('data-mode') === mode) {
+                    btn.classList.add('active');
+                }
+            });
+            
+            if (mode === 'forward') {
+                document.getElementById('forwardInputs').style.display = 'block';
+                document.getElementById('targetInputs').style.display = 'none';
+                document.getElementById('reverseResults').style.display = 'none';
+                calculate();
+            } else {
+                document.getElementById('forwardInputs').style.display = 'none';
+                document.getElementById('targetInputs').style.display = 'block';
+                document.getElementById('reverseResults').style.display = 'block';
+                calculateBackward();
+            }
+        }
+
+        function updateTeamAndCalculate() {
+            updateTeamInputs();
+            if (currentMode === 'forward') {
+                calculate();
+            } else {
+                calculateBackward();
+            }
+        }
+
+        function updateTeamInputs() {
+            const numSDRs = parseInt(document.getElementById('numSDRs').value) || 1;
+            const numAEs = parseInt(document.getElementById('numAEs').value) || 1;
+            
+            // Create SDR inputs
+            const sdrDiv = document.getElementById('sdrInputs');
+            sdrDiv.innerHTML = '<h4 style="margin-bottom: 8px; color: #2c3e50;">SDR Performance</h4>';
+            
+            for (let i = 1; i <= numSDRs; i++) {
+                const variation = 0.9 + (i * 0.02);
+                const sdrBox = document.createElement('div');
+                sdrBox.className = 'team-box';
+                sdrBox.innerHTML = `
+                    <h5>SDR ${i}</h5>
+                    <div class="row">
+                        <div>
+                            <label>Cadences/Month</label>
+                            <input type="number" id="sdr${i}_cadences" value="${Math.floor(40 * variation)}">
+                        </div>
+                        <div>
+                            <label>Meetings/Month</label>
+                            <input type="number" id="sdr${i}_meetings" value="${Math.floor(8 * variation)}">
+                        </div>
+                    </div>
+                `;
+                sdrDiv.appendChild(sdrBox);
+                
+                // Add event listeners
+                setTimeout(() => {
+                    const cadencesEl = document.getElementById(`sdr${i}_cadences`);
+                    const meetingsEl = document.getElementById(`sdr${i}_meetings`);
+                    if (cadencesEl) cadencesEl.addEventListener('input', debounce(calculate, 300));
+                    if (meetingsEl) meetingsEl.addEventListener('input', debounce(calculate, 300));
+                }, 100);
+            }
+            
+            // Create AE inputs
+            const aeDiv = document.getElementById('aeInputs');
+            aeDiv.innerHTML = '<h4 style="margin-bottom: 8px; color: #2c3e50;">AE Performance</h4>';
+            
+            for (let i = 1; i <= numAEs; i++) {
+                const variation = 0.85 + (i * 0.03);
+                const aeBox = document.createElement('div');
+                aeBox.className = 'team-box';
+                aeBox.innerHTML = `
+                    <h5>AE ${i}</h5>
+                    <div class="row">
+                        <div>
+                            <label>Pipeline ($)</label>
+                            <input type="number" id="ae${i}_pipeline" value="${Math.floor(640000 * variation)}">
+                        </div>
+                        <div>
+                            <label>Disc→Opp (%)</label>
+                            <input type="number" id="ae${i}_discToOpp" value="${Math.floor(45 * (0.95 + i * 0.01))}">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div>
+                            <label>Opp→Prop (%)</label>
+                            <input type="number" id="ae${i}_oppToProp" value="${Math.floor(70 * (0.9 + i * 0.02))}">
+                        </div>
+                        <div>
+                            <label>Prop→Close (%)</label>
+                            <input type="number" id="ae${i}_propToClose" value="${Math.floor(35 * (0.95 + i * 0.01))}">
+                        </div>
+                    </div>
+                `;
+                aeDiv.appendChild(aeBox);
+                
+                // Add event listeners
+                setTimeout(() => {
+                    const pipelineEl = document.getElementById(`ae${i}_pipeline`);
+                    const discToOppEl = document.getElementById(`ae${i}_discToOpp`);
+                    const oppToPropEl = document.getElementById(`ae${i}_oppToProp`);
+                    const propToCloseEl = document.getElementById(`ae${i}_propToClose`);
+                    
+                    if (pipelineEl) pipelineEl.addEventListener('input', debounce(calculate, 300));
+                    if (discToOppEl) discToOppEl.addEventListener('input', debounce(calculate, 300));
+                    if (oppToPropEl) oppToPropEl.addEventListener('input', debounce(calculate, 300));
+                    if (propToCloseEl) propToCloseEl.addEventListener('input', debounce(calculate, 300));
+                }, 100);
+            }
+        }
+
+        function getValue(id, defaultValue = 0) {
+            const element = document.getElementById(id);
+            return element ? (parseFloat(element.value) || defaultValue) : defaultValue;
+        }
+
+        function calculate() {
+            if (currentMode !== 'forward') return;
+            
+            // Get inputs
+            const arrTarget = getValue('arrTarget');
+            const avgDealSize = getValue('avgDealSize', 1);
+            const numAEs = getValue('numAEs', 1);
+            const numSDRs = getValue('numSDRs', 1);
+            const handoffRate = getValue('handoffRate') / 100;
+            const discToOpp = getValue('discToOpp') / 100;
+            const oppToProp = getValue('oppToProp') / 100;
+            const propToClose = getValue('propToClose') / 100;
+            const touchPoints = getValue('touchPoints', 8);
+
+            // Basic calculations
+            const monthlyRevenue = arrTarget / 12;
+            const dealsNeeded = Math.ceil(arrTarget / avgDealSize);
+            const aeConversionRate = discToOpp * oppToProp * propToClose;
+            const discoveryCalls = Math.ceil(dealsNeeded / aeConversionRate);
+            const sdrMeetings = Math.ceil(discoveryCalls / handoffRate);
+
+            // Update basic metrics
+            document.getElementById('monthlyRevenue').textContent = '$' + (monthlyRevenue/1000).toFixed(0) + 'K';
+            document.getElementById('dealsNeeded').textContent = dealsNeeded;
+            document.getElementById('discoveryCalls').textContent = discoveryCalls;
+            document.getElementById('sdrMeetings').textContent = sdrMeetings;
+
+            // Calculate AE performance
+            const quotaPerAE = arrTarget / numAEs;
+            let totalPipeline = 0;
+            let aeTableHTML = '';
+            let aeConversions = [];
+
+            for (let i = 1; i <= numAEs; i++) {
+                const pipeline = getValue(`ae${i}_pipeline`);
+                const disc = getValue(`ae${i}_discToOpp`) / 100;
+                const opp = getValue(`ae${i}_oppToProp`) / 100;
+                const prop = getValue(`ae${i}_propToClose`) / 100;
+                const overall = disc * opp * prop;
+                const weighted = pipeline * overall;
+                const coverage = pipeline / quotaPerAE;
+
+                totalPipeline += pipeline;
+                aeConversions.push({disc, opp, prop, overall});
+
+                let status = coverage >= 3 ? '✅ Good' : coverage >= 2 ? '⚠️ Risk' : '🚨 Critical';
+                let statusClass = coverage >= 3 ? 'status-good' : coverage >= 2 ? 'status-warn' : 'status-bad';
+
+                aeTableHTML += `
+                    <tr>
+                        <td>AE ${i}</td>
+                        <td>$${(quotaPerAE/1000).toFixed(0)}K</td>
+                        <td>$${(pipeline/1000).toFixed(0)}K</td>
+                        <td>${(disc*100).toFixed(0)}%</td>
+                        <td>${(opp*100).toFixed(0)}%</td>
+                        <td>${(prop*100).toFixed(0)}%</td>
+                        <td>${(overall*100).toFixed(1)}%</td>
+                        <td>$${(weighted/1000).toFixed(0)}K</td>
+                        <td>${coverage.toFixed(1)}x</td>
+                        <td class="${statusClass}">${status}</td>
+                    </tr>
+                `;
+            }
+            document.getElementById('aeTable').innerHTML = aeTableHTML;
+
+            // Coverage calculations
+            const basicCoverage = totalPipeline / arrTarget;
+            const weightedCoverage = (totalPipeline * aeConversionRate) / arrTarget;
+
+            document.getElementById('basicCoverage').textContent = basicCoverage.toFixed(1) + 'x';
+            document.getElementById('weightedCoverage').textContent = weightedCoverage.toFixed(1) + 'x';
+
+            document.getElementById('coverageMath').innerHTML = 
+                '<strong>Basic Coverage:</strong> $' + (totalPipeline/1000000).toFixed(2) + 'M ÷ $' + (arrTarget/1000000).toFixed(2) + 'M = ' + basicCoverage.toFixed(1) + 'x<br>' +
+                '<strong>AE Conversion:</strong> ' + (discToOpp*100).toFixed(0) + '% × ' + (oppToProp*100).toFixed(0) + '% × ' + (propToClose*100).toFixed(0) + '% = ' + (aeConversionRate*100).toFixed(1) + '%<br>' +
+                '<strong>Weighted Coverage:</strong>  + (totalPipeline/1000000).toFixed(2) + 'M × ' + (aeConversionRate*100).toFixed(1) + '% = ' + weightedCoverage.toFixed(1) + 'x';
+
+            // SDR performance
+            let sdrTableHTML = '';
+            let totalMeetings = 0;
+            const targetPerSDR = sdrMeetings / numSDRs / 12;
+
+            for (let i = 1; i <= numSDRs; i++) {
+                const cadences = getValue(`sdr${i}_cadences`);
+                const meetings = getValue(`sdr${i}_meetings`);
+                const emails = cadences * Math.floor(touchPoints * 0.6);
+                const calls = cadences * Math.ceil(touchPoints * 0.4);
+                
+                totalMeetings += meetings;
+
+                let status = meetings >= targetPerSDR ? '✅ Good' : meetings >= targetPerSDR * 0.8 ? '⚠️ Below' : '🚨 Critical';
+                let statusClass = meetings >= targetPerSDR ? 'status-good' : meetings >= targetPerSDR * 0.8 ? 'status-warn' : 'status-bad';
+
+                sdrTableHTML += `
+                    <tr>
+                        <td>SDR ${i}</td>
+                        <td>${cadences}</td>
+                        <td>${emails}</td>
+                        <td>${calls}</td>
+                        <td>${meetings}</td>
+                        <td class="${statusClass}">${status}</td>
+                    </tr>
+                `;
+            }
+            document.getElementById('sdrTable').innerHTML = sdrTableHTML;
+
+            // SDR Analysis
+            const currentAnnual = totalMeetings * 12;
+            const efficiency = (currentAnnual / sdrMeetings * 100).toFixed(0);
+            
+            document.getElementById('sdrAnalysis').innerHTML = 
+                '<strong>Monthly Performance:</strong> ' + totalMeetings + ' meetings vs ' + Math.ceil(sdrMeetings/12) + ' needed<br>' +
+                '<strong>Annual Projection:</strong> ' + currentAnnual + ' meetings vs ' + sdrMeetings + ' required<br>' +
+                '<strong>Team Efficiency:</strong> ' + efficiency + '% of target<br>' +
+                '<strong>Target per SDR:</strong> ' + targetPerSDR.toFixed(1) + ' meetings/month';
+
+            // AE Analysis
+            if (aeConversions.length > 0) {
+                const avgDisc = aeConversions.reduce((sum, ae) => sum + ae.disc, 0) / aeConversions.length;
+                const avgOpp = aeConversions.reduce((sum, ae) => sum + ae.opp, 0) / aeConversions.length;
+                const underperforming = aeConversions.filter(ae => ae.disc < avgDisc * 0.9).length;
+                
+                document.getElementById('aeAnalysis').innerHTML = 
+                    '<strong>Team Averages:</strong> Disc→Opp ' + (avgDisc*100).toFixed(1) + '%, Opp→Prop ' + (avgOpp*100).toFixed(1) + '%<br>' +
+                    '<strong>Performance Variance:</strong> ' + underperforming + ' AE(s) below 90% of team average<br>' +
+                    '<strong>Lead Quality:</strong> ' + (underperforming > numAEs/2 ? 'Multiple underperformers suggest lead quality issues' : 'Individual coaching opportunities identified');
+            }
+
+            // Generate recommendations
+            generateRecommendations(basicCoverage, weightedCoverage, currentAnnual, sdrMeetings, totalMeetings, numSDRs, aeConversions.filter(ae => ae.disc < 0.4).length, numAEs);
+        }
+
+        function calculateBackward() {
+            if (currentMode !== 'target') return;
+            
+            const targetMeetings = getValue('targetMeetings', 40);
+            const targetCadences = getValue('targetCadences', 200);
+            const numSDRs = getValue('numSDRs', 1);
+            const touchPoints = getValue('touchPoints', 8);
+            
+            // Reverse calculations
+            const cadencesPerSDR = Math.ceil(targetCadences / numSDRs);
+            const meetingsPerSDR = Math.ceil(targetMeetings / numSDRs);
+            const prospectsPerSDR = Math.ceil(cadencesPerSDR / 0.2); // 20% conversion rate
+            const emailsPerSDR = cadencesPerSDR * Math.floor(touchPoints * 0.6);
+            const callsPerSDR = cadencesPerSDR * Math.ceil(touchPoints * 0.4);
+            
+            // Update displays
+            document.getElementById('reqCadences').textContent = cadencesPerSDR + '/month';
+            document.getElementById('reqProspects').textContent = prospectsPerSDR.toLocaleString() + '/month';
+            document.getElementById('reqEmails').textContent = emailsPerSDR.toLocaleString() + '/month';
+            document.getElementById('reqCalls').textContent = callsPerSDR.toLocaleString() + '/month';
+            
+            // Update basic metrics for context
+            const arrTarget = getValue('arrTarget', 1000000);
+            const avgDealSize = getValue('avgDealSize', 50000);
+            const monthlyRevenue = arrTarget / 12;
+            const dealsNeeded = Math.ceil(arrTarget / avgDealSize);
+            
+            document.getElementById('monthlyRevenue').textContent = ' + (monthlyRevenue/1000).toFixed(0) + 'K';
+            document.getElementById('dealsNeeded').textContent = dealsNeeded;
+            document.getElementById('discoveryCalls').textContent = Math.ceil(targetMeetings * 1.25);
+            document.getElementById('sdrMeetings').textContent = targetMeetings;
+            
+            // Generate reverse recommendations
+            const recommendations = [
+                '🎯 To generate ' + targetMeetings + ' meetings/month: each SDR needs ' + meetingsPerSDR + ' meetings (' + cadencesPerSDR + ' cadences)',
+                '📊 Total prospect outreach: ' + (prospectsPerSDR * numSDRs).toLocaleString() + ' prospects/month across team',
+                '📧 Email volume required: ' + (emailsPerSDR * numSDRs).toLocaleString() + ' emails/month (' + Math.ceil(emailsPerSDR * numSDRs / 22) + ' per working day)',
+                '📞 Call volume required: ' + (callsPerSDR * numSDRs).toLocaleString() + ' calls/month (' + Math.ceil(callsPerSDR * numSDRs / 22) + ' per working day)',
+                '⚡ Efficiency benchmark: ' + (targetMeetings / targetCadences * 100).toFixed(1) + '% cadence-to-meeting conversion needed'
+            ];
+            
+            document.getElementById('recommendations').innerHTML = '<ul>' + recommendations.map(rec => '<li>' + rec + '</li>').join('') + '</ul>';
+        }
+
+        function generateRecommendations(basicCoverage, weightedCoverage, currentAnnual, sdrMeetings, totalMeetings, numSDRs, underperforming, numAEs) {
+            const recommendations = [];
+            
+            // Coverage analysis
+            if (basicCoverage < 3) {
+                const gap = getValue('arrTarget') * 3 - (basicCoverage * getValue('arrTarget'));
+                recommendations.push('🚨 Pipeline below 3x coverage - increase pipeline by  + (gap/1000).toFixed(0) + 'K');
+            }
+            
+            if (weightedCoverage < 1.2) {
+                recommendations.push('⚠️ Weighted coverage below 1.2x - improve conversion rates or pipeline quality');
+            }
+            
+            // Meeting generation
+            if (currentAnnual < sdrMeetings) {
+                const shortfall = sdrMeetings - currentAnnual;
+                recommendations.push('📞 Annual meeting shortfall of ' + shortfall + ' - each SDR needs ' + Math.ceil(shortfall / numSDRs / 12) + ' more meetings/month');
+            }
+            
+            // Team performance
+            if (underperforming > 0) {
+                recommendations.push('👥 ' + underperforming + ' AE(s) underperforming - provide coaching on discovery-to-opportunity conversion');
+            }
+            
+            // Scaling opportunities
+            const avgMeetingsPerSDR = totalMeetings / numSDRs;
+            if (avgMeetingsPerSDR > 12) {
+                recommendations.push('📈 SDRs averaging ' + avgMeetingsPerSDR.toFixed(1) + ' meetings/month - consider hiring additional SDRs');
+            }
+            
+            // Strategic insights
+            const efficiency = currentAnnual / sdrMeetings;
+            if (efficiency < 0.8) {
+                recommendations.push('🎯 Current efficiency at ' + (efficiency * 100).toFixed(0) + '% - focus on cadence optimization and conversion improvement');
+            } else if (efficiency > 1.2) {
+                recommendations.push('🚀 Exceeding targets by ' + ((efficiency - 1) * 100).toFixed(0) + '% - opportunity to scale team or increase quotas');
+            }
+            
+            // Email and call performance
+            const deliveryRate = getValue('deliveryRate') / 100;
+            const openRate = getValue('openRate') / 100;
+            const responseRate = getValue('responseRate') / 100;
+            const emailEfficiency = deliveryRate * openRate * responseRate;
+            
+            if (emailEfficiency < 0.006) {
+                recommendations.push('📧 Email performance at ' + (emailEfficiency * 100).toFixed(2) + '% - benchmark is 0.6%+');
+            }
+            
+            const callConnect = getValue('callConnectRate') / 100;
+            const meetingBook = getValue('meetingBookRate') / 100;
+            const callEfficiency = callConnect * meetingBook;
+            
+            if (callEfficiency < 0.012) {
+                recommendations.push('📞 Call-to-meeting rate at ' + (callEfficiency * 100).toFixed(1) + '% - benchmark is 1.2%+');
+            }
+            
+            if (recommendations.length === 0) {
+                recommendations.push('✅ Performance looks strong across all metrics - maintain current trajectory');
+            }
+            
+            document.getElementById('recommendations').innerHTML = '<ul>' + recommendations.map(rec => '<li>' + rec + '</li>').join('') + '</ul>';
+        }
+    </script>
+</body>
+</html>
